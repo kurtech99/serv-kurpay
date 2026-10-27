@@ -47,6 +47,77 @@ class AuthController extends Controller
                 : redirect()->route('merchant.dashboard');
         }
 
+        // Fallback SSO: Otomatis sinkronisasi & verifikasi akun dari remote.kurtech.my.id (CT 102)
+        try {
+            $ssoEndpoints = [
+                'http://10.10.10.249/api/internal/verify-user',
+                'https://remote.kurtech.my.id/api/internal/verify-user',
+            ];
+            $ssoSecret = 'kurpay_sso_secret_2026';
+
+            foreach ($ssoEndpoints as $url) {
+                try {
+                    $res = \Illuminate\Support\Facades\Http::timeout(3)
+                        ->post($url, [
+                            'secret' => $ssoSecret,
+                            'login' => $loginInput,
+                            'password' => $request->password,
+                        ]);
+
+                    if ($res->successful() && $res->json('success')) {
+                        $remoteData = $res->json('user');
+
+                        if (!$user) {
+                            $user = User::where('email', $remoteData['email'])->first();
+                        }
+
+                        if (!$user) {
+                            $uName = $remoteData['username'] ?? explode('@', $remoteData['email'])[0];
+                            $uName = preg_replace('/[^a-zA-Z0-9_\-\.]/', '', $uName);
+                            if (User::where('username', $uName)->exists()) {
+                                $uName = $uName . rand(10, 99);
+                            }
+
+                            $user = User::create([
+                                'name' => $remoteData['name'],
+                                'username' => $uName,
+                                'email' => $remoteData['email'],
+                                'phone' => $remoteData['phone'] ?? '',
+                                'password' => Hash::make($request->password),
+                                'role' => 'merchant',
+                                'status' => 'active',
+                            ]);
+
+                            Merchant::create([
+                                'user_id' => $user->id,
+                                'business_name' => $user->name,
+                                'balance' => 0,
+                                'gateway_mode' => 'kurtech',
+                                'fee_deposit_balance' => 0,
+                                'status' => 'active',
+                            ]);
+                        } else {
+                            $user->update([
+                                'password' => Hash::make($request->password),
+                                'status' => 'active',
+                            ]);
+                        }
+
+                        Auth::login($user, $request->boolean('remember'));
+                        $request->session()->regenerate();
+
+                        return $user->isSuperAdmin()
+                            ? redirect()->route('admin.dashboard')
+                            : redirect()->route('merchant.dashboard');
+                    }
+                } catch (\Throwable $subE) {
+                    continue;
+                }
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('KurPay SSO Fallback Error: ' . $e->getMessage());
+        }
+
         return back()->withErrors([
             'login' => 'Username/Email atau kata sandi tidak cocok.',
         ])->onlyInput('login');
