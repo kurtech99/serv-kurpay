@@ -14,7 +14,10 @@ class PaymentController extends Controller
 
         $merchant = $trx->merchant;
         
-        // Top up deposit fee selalu wajib menggunakan QRIS resmi Kurtech
+        // Dapatkan QRIS Dinamis (Auto-Nominal)
+        $qrString = $trx->getDynamicQris();
+
+        // Fallback static image if needed
         if (!$trx->is_deposit_topup && $trx->gateway_mode === 'custom' && $merchant && $merchant->isCustomGateway() && !empty($merchant->custom_qris_image)) {
             $qrisImage = asset('storage/' . $merchant->custom_qris_image);
             $merchantName = $merchant->custom_qris_name ?: $merchant->business_name;
@@ -27,7 +30,15 @@ class PaymentController extends Controller
             $isCustom = false;
         }
 
-        return view('pay.checkout', compact('trx', 'merchant', 'qrisImage', 'merchantName', 'nmid', 'isCustom'));
+        return view('pay.checkout', compact('trx', 'merchant', 'qrisImage', 'merchantName', 'nmid', 'isCustom', 'qrString'));
+    }
+
+    public function qrImage($trxId)
+    {
+        $trx = Transaction::with('merchant')->where('trx_id', $trxId)->firstOrFail();
+        $qrString = $trx->getDynamicQris();
+        
+        return redirect('https://api.qrserver.com/v1/create-qr-code/?size=350x350&data=' . urlencode($qrString));
     }
 
     public function checkStatus($trxId)

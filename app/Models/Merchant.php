@@ -29,6 +29,7 @@ class Merchant extends Model
         'custom_qris_image',
         'custom_nmid',
         'custom_qris_name',
+        'custom_qris_payload',
         'fee_deposit_balance',
     ];
 

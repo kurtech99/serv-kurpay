@@ -113,6 +113,17 @@
 
             <div style="margin-bottom: 14px;">
                 <label style="display: block; font-size: 12px; font-weight: 700; color: var(--kp-text-muted); margin-bottom: 5px;">
+                    String QRIS DANA Kurtech (EMVCo Payload)
+                </label>
+                <textarea name="qris_kurtech_payload" rows="3" required 
+                          style="width: 100%; padding: 10px 14px; border-radius: 12px; border: 1.5px solid var(--kp-border); font-size: 11px; font-family: var(--kp-mono); outline: none;">{{ old('qris_kurtech_payload', $settings['qris_kurtech_payload']) }}</textarea>
+                <div style="font-size: 11px; color: #059669; margin-top: 4px;">
+                    <i class="fa-solid fa-bolt"></i> String QRIS statis ini digunakan untuk mengubah QRIS menjadi <b>QRIS Dinamis Otomatis Nominal</b> saat checkout.
+                </div>
+            </div>
+
+            <div style="margin-bottom: 14px;">
+                <label style="display: block; font-size: 12px; font-weight: 700; color: var(--kp-text-muted); margin-bottom: 5px;">
                     Secret Key Notifikasi DANA
                 </label>
                 <input type="text" name="dana_secret" value="{{ old('dana_secret', $settings['dana_secret']) }}" required 

@@ -73,9 +73,8 @@ class ApiController extends Controller
         ]);
 
         $checkoutUrl = url('/pay/' . $trx->trx_id);
-        $qrUrl = ($merchant->isCustomGateway() && !empty($merchant->custom_qris_image))
-            ? asset('storage/' . $merchant->custom_qris_image)
-            : asset('images/qris-clean.png');
+        $qrString = $trx->getDynamicQris();
+        $qrUrl = url('/pay/' . $trx->trx_id . '/qr');
 
         return response()->json([
             'success' => true,
@@ -90,6 +89,7 @@ class ApiController extends Controller
                 'unique_code' => $uniqueCode,
                 'total_amount' => (int) $totalAmount,
                 'checkout_url' => $checkoutUrl,
+                'qr_string' => $qrString,
                 'qr_url' => $qrUrl,
                 'status' => $trx->status,
                 'expired_at' => $trx->expired_at ? $trx->expired_at->timestamp : null,

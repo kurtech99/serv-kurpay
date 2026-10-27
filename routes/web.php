@@ -19,6 +19,7 @@ Route::match(['get', 'post'], '/logout', [AuthController::class, 'logout'])->nam
 
 // Public Payment Checkout Page (Pelanggan Hotspot Scan QRIS)
 Route::get('/pay/{trx_id}', [PaymentController::class, 'checkout'])->name('pay.checkout');
+Route::get('/pay/{trx_id}/qr', [PaymentController::class, 'qrImage'])->name('pay.qr');
 Route::get('/pay/{trx_id}/status', [PaymentController::class, 'checkStatus'])->name('pay.status');
 
 // Merchant / Tenant Portal

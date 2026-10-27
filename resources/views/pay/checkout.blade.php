@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="{{ asset('js/qrious.min.js') }}"></script>
     
     <style>
         :root {
@@ -310,9 +311,24 @@
         </div>
 
         <div class="qr-wrapper">
-            <img src="{{ $qrisImage }}" alt="QRIS Standar Indonesia" class="qr-image">
+            <!-- Official Red QRIS Top Header -->
+            <div style="background: #be123c; color: white; border-radius: 8px 8px 0 0; padding: 6px 12px; margin: -14px -14px 10px -14px; display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 11px; font-weight: 900; letter-spacing: 1px;">QRIS</span>
+                <span style="font-size: 9.5px; font-weight: 700; opacity: 0.9; text-transform: uppercase;">Pembayaran Nasional</span>
+            </div>
+
+            <!-- Dynamic QR Canvas (Auto-Nominal Lock) -->
+            <canvas id="qrCodeCanvas" class="qr-image" style="width: 240px; height: 240px; margin: 0 auto; display: block; border-radius: 6px;"></canvas>
+
+            <!-- Fallback Image if JS Canvas is disabled -->
+            <img id="qrCodeFallback" src="https://api.qrserver.com/v1/create-qr-code/?size=350x350&data={{ urlencode($qrString) }}" alt="QRIS Standar Indonesia" class="qr-image" style="display: none; width: 240px; height: 240px; margin: 0 auto; border-radius: 6px;">
+
+            <div style="background: #ecfdf5; color: #047857; font-size: 11px; font-weight: 800; border-radius: 20px; padding: 4px 10px; margin-top: 10px; display: inline-flex; align-items: center; gap: 5px; border: 1px solid #a7f3d0;">
+                <i class="fa-solid fa-bolt" style="color: #059669;"></i> QRIS Dinamis Otomatis Nominal
+            </div>
+
             <div class="qr-brand-bar">
-                <span>NMID: {{ $nmid }}</span>
+                <span>NMID: {{ $nmid }} &bull; {{ $merchantName }}</span>
             </div>
         </div>
 
@@ -324,8 +340,9 @@
                     <i class="fa-regular fa-copy"></i> Salin
                 </button>
             </div>
-            <div class="amount-warning">
-                <i class="fa-solid fa-triangle-exclamation"></i> Masukkan nominal tepat hingga 3 digit terakhir (<b>{{ substr((string)(int)$trx->total_amount, -3) }}</b>)!
+            <div style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; border-radius: 8px; padding: 7px 10px; font-size: 11.5px; font-weight: 600; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                <i class="fa-solid fa-circle-check" style="color: #2563eb;"></i>
+                <span><b>Nominal Otomatis!</b> Di scan langsung terisi <b>Rp {{ number_format($trx->total_amount, 0, ',', '.') }}</b> di DANA/BCA/m-Banking.</span>
             </div>
             @if($trx->customer_fee > 0)
                 <div style="font-size: 11.5px; color: var(--kp-text-muted); margin-top: 8px; padding-top: 6px; border-top: 1px dashed #cbd5e1; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px;">
@@ -394,6 +411,26 @@
     const rawAmount = "{{ (int) $trx->total_amount }}";
     const isAlreadyPaid = {{ $trx->isPaid() ? 'true' : 'false' }};
     const callbackUrl = "{{ $trx->callback_url }}";
+    const qrString = @json($qrString);
+
+    // Render Dynamic QRIS Canvas
+    try {
+        if (typeof QRious !== 'undefined' && qrString) {
+            new QRious({
+                element: document.getElementById('qrCodeCanvas'),
+                value: qrString,
+                size: 320,
+                level: 'M'
+            });
+        } else {
+            document.getElementById('qrCodeCanvas').style.display = 'none';
+            document.getElementById('qrCodeFallback').style.display = 'block';
+        }
+    } catch (e) {
+        console.error('QRious render error:', e);
+        document.getElementById('qrCodeCanvas').style.display = 'none';
+        document.getElementById('qrCodeFallback').style.display = 'block';
+    }
 
     // Copy Amount
     function copyAmount() {

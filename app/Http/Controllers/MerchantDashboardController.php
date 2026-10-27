@@ -284,6 +284,7 @@ class MerchantDashboardController extends Controller
             'gateway_mode' => 'required|in:kurtech,custom',
             'custom_nmid' => 'nullable|string|max:50',
             'custom_qris_name' => 'nullable|string|max:100',
+            'custom_qris_payload' => 'nullable|string',
             'custom_qris_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072',
         ]);
 
@@ -291,6 +292,7 @@ class MerchantDashboardController extends Controller
             'gateway_mode' => $request->gateway_mode,
             'custom_nmid' => $request->custom_nmid,
             'custom_qris_name' => $request->custom_qris_name,
+            'custom_qris_payload' => $request->custom_qris_payload,
         ];
 
         if ($request->hasFile('custom_qris_image')) {

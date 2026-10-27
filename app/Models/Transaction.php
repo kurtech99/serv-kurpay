@@ -24,6 +24,7 @@ class Transaction extends Model
         'merchant_net',
         'status',
         'gateway_mode',
+        'qr_string',
         'is_deposit_topup',
         'deposit_fee_deducted',
         'callback_url',
@@ -72,5 +73,16 @@ class Transaction extends Model
     public function isPending(): bool
     {
         return $this->status === 'pending';
+    }
+
+    public function getDynamicQris(): string
+    {
+        if (!empty($this->qr_string)) {
+            return $this->qr_string;
+        }
+
+        $dynamic = \App\Services\QrisService::generateForTransaction($this);
+        $this->update(['qr_string' => $dynamic]);
+        return $dynamic;
     }
 }

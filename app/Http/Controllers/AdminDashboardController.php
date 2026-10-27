@@ -117,6 +117,7 @@ class AdminDashboardController extends Controller
             'admin_whatsapp' => Setting::get('admin_whatsapp', '6283826164767'),
             'merchant_qris_name' => Setting::get('merchant_qris_name', 'kurtech'),
             'merchant_nmid' => Setting::get('merchant_nmid', 'ID1025414745014'),
+            'qris_kurtech_payload' => Setting::get('qris_kurtech_payload', \App\Services\QrisService::DEFAULT_KURTECH_PAYLOAD),
         ];
 
         return view('admin.settings', compact('settings'));
@@ -129,7 +130,8 @@ class AdminDashboardController extends Controller
             'withdraw_min', 'withdraw_max', 'withdraw_fee',
             'withdraw_open_time', 'withdraw_close_time',
             'dana_secret', 'admin_whatsapp',
-            'merchant_qris_name', 'merchant_nmid'
+            'merchant_qris_name', 'merchant_nmid',
+            'qris_kurtech_payload'
         ];
 
         foreach ($keys as $key) {

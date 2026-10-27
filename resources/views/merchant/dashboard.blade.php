@@ -166,14 +166,24 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                     <div>
                         <label style="display: block; font-size: 11.5px; font-weight: 700; color: var(--kp-text-main); margin-bottom: 4px;">Nama Usaha di QRIS</label>
-                        <input type="text" name="custom_qris_name" value="{{ old('custom_qris_name', $merchant->custom_qris_name) }}" placeholder="Contoh: Berkah Net DANA" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 12.5px;">
+                        <input type="text" name="custom_qris_name" id="customQrisNameInput" value="{{ old('custom_qris_name', $merchant->custom_qris_name) }}" placeholder="Contoh: Berkah Net DANA" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 12.5px;">
                     </div>
                     <div>
                         <label style="display: block; font-size: 11.5px; font-weight: 700; color: var(--kp-text-main); margin-bottom: 4px;">NMID QRIS (Opsional)</label>
-                        <input type="text" name="custom_nmid" value="{{ old('custom_nmid', $merchant->custom_nmid) }}" placeholder="Contoh: ID1025xxxxxxxx" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 12.5px;">
+                        <input type="text" name="custom_nmid" id="customNmidInput" value="{{ old('custom_nmid', $merchant->custom_nmid) }}" placeholder="Contoh: ID1025xxxxxxxx" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 12.5px;">
+                    </div>
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 11.5px; font-weight: 700; color: var(--kp-text-main); margin-bottom: 4px;">
+                        Kode String QRIS (Otomatis Terdeteksi dari Gambar / Bisa Diisi Manual)
+                    </label>
+                    <textarea name="custom_qris_payload" id="customQrisPayloadInput" rows="2" placeholder="000201010211... (String EMVCo QRIS)" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 11px; font-family: var(--kp-mono);">{{ old('custom_qris_payload', $merchant->custom_qris_payload) }}</textarea>
+                    <div style="font-size: 11px; color: #059669; margin-top: 4px; font-weight: 600;">
+                        <i class="fa-solid fa-bolt"></i> <b>Fitur Dynamic QRIS (Auto-Nominal)</b>: Dengan string ini, pembeli voucher Hotspot Anda saat scan di m-Banking/DANA akan langsung terkunci nominal harganya (tanpa perlu ketik nominal manual seperti TriPay).
                     </div>
                 </div>
             </div>
@@ -322,6 +332,7 @@
     @endif
 </div>
 
+<script src="{{ asset('js/jsqr.js') }}"></script>
 <script>
 function toggleCustomFields(isCustom) {
     const container = document.getElementById('customQrisContainer');
@@ -336,5 +347,68 @@ function setDepositAmount(amount) {
         input.value = amount;
     }
 }
+
+// Auto-detect QRIS string & NMID from uploaded QRIS image using jsQR
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.querySelector('input[name="custom_qris_image"]');
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+
+                    try {
+                        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        if (typeof jsQR !== 'undefined') {
+                            const qr = jsQR(imgData.data, imgData.width, imgData.height);
+                            if (qr && qr.data && qr.data.startsWith('000201')) {
+                                const payloadInput = document.getElementById('customQrisPayloadInput');
+                                if (payloadInput) {
+                                    payloadInput.value = qr.data;
+                                }
+
+                                // Auto extract NMID
+                                const nmidMatch = qr.data.match(/0215(ID[0-9A-Z]+)/);
+                                if (nmidMatch) {
+                                    const nmidInput = document.getElementById('customNmidInput');
+                                    if (nmidInput && !nmidInput.value) {
+                                        nmidInput.value = nmidMatch[1];
+                                    }
+                                }
+
+                                // Auto extract Merchant Name (Tag 59)
+                                const nameMatch = qr.data.match(/59([0-9]{2})([^0-9]+)/);
+                                if (nameMatch) {
+                                    const nameLen = parseInt(nameMatch[1], 10);
+                                    const nameStart = qr.data.indexOf('59' + nameMatch[1]) + 4;
+                                    const extractedName = qr.data.substr(nameStart, nameLen);
+                                    const nameInput = document.getElementById('customQrisNameInput');
+                                    if (nameInput && !nameInput.value) {
+                                        nameInput.value = extractedName;
+                                    }
+                                }
+
+                                alert('✨ QRIS Berhasil Dibaca!\nString QRIS dan NMID otomatis terisi untuk fitur Dynamic QRIS (Auto-Nominal).');
+                            }
+                        }
+                    } catch (err) {
+                        console.error('QR decode error:', err);
+                    }
+                };
+                img.src = evt.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+});
 </script>
 @endsection
