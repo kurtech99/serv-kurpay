@@ -321,9 +321,17 @@
                                         <i class="fa-solid fa-check"></i> Lunas
                                     </span>
                                 @else
-                                    <span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 800;">
-                                        <i class="fa-solid fa-clock"></i> Pending
-                                    </span>
+                                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                        <span style="background: #fef3c7; color: #b45309; border: 1px solid #fde68a; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 800;">
+                                            <i class="fa-solid fa-clock"></i> Pending
+                                        </span>
+                                        <form action="{{ route('merchant.transactions.markPaid', $trx->id) }}" method="POST" style="margin: 0;" onsubmit="return confirm('Konfirmasi: Uang transaksi ini sebesar Rp {{ number_format($trx->total_amount, 0, \',\', \'.\') }} sudah masuk ke DANA Anda?')">
+                                            @csrf
+                                            <button type="submit" class="kp-btn kp-btn-success" style="padding: 3px 8px; font-size: 10.5px; font-weight: 800; border-radius: 6px;" title="Tandai Lunas manual jika sudah cek mutasi DANA">
+                                                <i class="fa-solid fa-check-double"></i> Tandai Lunas
+                                            </button>
+                                        </form>
+                                    </div>
                                 @endif
                             </td>
                         </tr>

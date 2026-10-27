@@ -348,4 +348,53 @@ class MerchantDashboardController extends Controller
 
         return redirect()->route('pay.checkout', $trx->trx_id)->with('info', 'Silakan scan QRIS untuk menyelesaikan Top Up Saldo Deposit Fee sebesar Rp ' . number_format($totalAmount, 0, ',', '.') . '.');
     }
+
+    public function markPaid($id)
+    {
+        $merchant = $this->getMerchant();
+        $trx = Transaction::where('merchant_id', $merchant->id)->where('id', $id)->firstOrFail();
+
+        if ($trx->isPaid()) {
+            return back()->with('info', 'Transaksi ini sudah berstatus lunas.');
+        }
+
+        $trx->update([
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+
+        if ($trx->is_deposit_topup) {
+            $merchant->addFeeDeposit($trx->amount);
+        } elseif ($trx->gateway_mode === 'custom') {
+            $feeToDeduct = (float) ($trx->customer_fee > 0 ? $trx->customer_fee : ceil($trx->amount * 0.003));
+            $merchant->deductFeeDeposit($feeToDeduct);
+            $trx->update(['deposit_fee_deducted' => $feeToDeduct]);
+        } else {
+            $merchant->addBalance($trx->amount);
+        }
+
+        // Forward Webhook to Billing / Mikhmon
+        if (!empty($trx->callback_url) && !$trx->is_deposit_topup) {
+            try {
+                $payload = [
+                    'event' => 'payment.success',
+                    'trx_id' => $trx->trx_id,
+                    'order_id' => $trx->order_id,
+                    'amount' => (int) $trx->amount,
+                    'total_amount' => (int) $trx->total_amount,
+                    'status' => 'paid',
+                    'paid_at' => now()->toISOString(),
+                ];
+                $res = \Illuminate\Support\Facades\Http::timeout(5)->post($trx->callback_url, $payload);
+                $trx->update([
+                    'callback_status' => $res->successful() ? 'success' : 'failed',
+                    'callback_response' => substr($res->body(), 0, 500)
+                ]);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Webhook forwarding error: ' . $e->getMessage());
+            }
+        }
+
+        return back()->with('success', "Transaksi #{$trx->trx_id} berhasil ditandai LUNAS dan voucher/layanan telah diaktifkan!");
+    }
 }

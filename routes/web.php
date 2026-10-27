@@ -38,6 +38,7 @@ Route::middleware(['auth'])->prefix('merchant')->name('merchant.')->group(functi
     Route::post('/webhook', [MerchantDashboardController::class, 'updateWebhook'])->name('webhook.update');
     Route::post('/gateway-mode', [MerchantDashboardController::class, 'updateGatewayMode'])->name('gateway.update');
     Route::post('/deposit/topup', [MerchantDashboardController::class, 'topupDeposit'])->name('deposit.topup');
+    Route::post('/transactions/{id}/mark-paid', [MerchantDashboardController::class, 'markPaid'])->name('transactions.markPaid');
 });
 
 // SuperAdmin Portal (Khusus Admin Kurtech)
