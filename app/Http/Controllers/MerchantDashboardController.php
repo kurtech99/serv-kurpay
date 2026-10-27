@@ -12,17 +12,104 @@ use Illuminate\Support\Str;
 
 class MerchantDashboardController extends Controller
 {
-    private function getMerchant(): Merchant
+    private function getMerchant($merchantId = null): Merchant
     {
         $user = Auth::user();
-        if (!$user->merchant) {
-            return Merchant::create([
+        if ($merchantId) {
+            $m = Merchant::where('user_id', $user->id)->where('id', $merchantId)->first();
+            if ($m) {
+                session(['active_merchant_id' => $m->id]);
+                return $m;
+            }
+        }
+
+        $activeId = session('active_merchant_id');
+        if ($activeId) {
+            $m = Merchant::where('user_id', $user->id)->where('id', $activeId)->first();
+            if ($m) return $m;
+        }
+
+        $m = Merchant::where('user_id', $user->id)->first();
+        if (!$m) {
+            $m = Merchant::create([
                 'user_id' => $user->id,
                 'business_name' => $user->name . ' WiFi',
                 'balance' => 0,
+                'gateway_mode' => 'kurtech',
+                'fee_deposit_balance' => 0,
+                'status' => 'active',
             ]);
         }
-        return $user->merchant;
+        session(['active_merchant_id' => $m->id]);
+        return $m;
+    }
+
+    public function merchants()
+    {
+        $user = Auth::user();
+        $merchants = Merchant::where('user_id', $user->id)
+            ->withCount(['transactions as total_paid_tx' => function ($q) {
+                $q->where('status', 'paid');
+            }])
+            ->withSum(['transactions as total_revenue' => function ($q) {
+                $q->where('status', 'paid');
+            }], 'amount')
+            ->latest()
+            ->get();
+
+        $activeMerchant = $this->getMerchant();
+
+        return view('merchant.merchants', compact('merchants', 'activeMerchant'));
+    }
+
+    public function storeMerchant(Request $request)
+    {
+        $user = Auth::user();
+
+        $request->validate([
+            'business_name' => 'required|string|max:100',
+            'gateway_mode'  => 'required|in:kurtech,custom',
+            'webhook_url'   => 'nullable|url|max:255',
+        ]);
+
+        $merchant = Merchant::create([
+            'user_id' => $user->id,
+            'business_name' => $request->business_name,
+            'gateway_mode' => $request->gateway_mode,
+            'webhook_url' => $request->webhook_url,
+            'balance' => 0,
+            'fee_deposit_balance' => 0,
+            'status' => 'active',
+        ]);
+
+        session(['active_merchant_id' => $merchant->id]);
+
+        return redirect()->route('merchant.merchants')->with('success', "Merchant/Router '{$merchant->business_name}' berhasil ditambahkan! Kode: {$merchant->merchant_code}");
+    }
+
+    public function switchMerchant($id)
+    {
+        $user = Auth::user();
+        $merchant = Merchant::where('user_id', $user->id)->where('id', $id)->firstOrFail();
+        session(['active_merchant_id' => $merchant->id]);
+
+        return redirect()->route('merchant.dashboard')->with('success', "Berhasil beralih ke Merchant: {$merchant->business_name}");
+    }
+
+    public function deleteMerchant($id)
+    {
+        $user = Auth::user();
+        if ($user->merchants()->count() <= 1) {
+            return back()->with('error', 'Anda harus memiliki minimal 1 merchant aktif.');
+        }
+
+        $merchant = Merchant::where('user_id', $user->id)->where('id', $id)->firstOrFail();
+        $name = $merchant->business_name;
+        $merchant->delete();
+
+        session()->forget('active_merchant_id');
+
+        return redirect()->route('merchant.merchants')->with('success', "Merchant {$name} berhasil dihapus.");
     }
 
     public function index()
@@ -153,21 +240,25 @@ class MerchantDashboardController extends Controller
         return back()->with('success', 'Pengaturan penarikan otomatis berhasil disimpan!');
     }
 
-    public function apiCredentials()
+    public function apiCredentials(Request $request)
     {
-        $merchant = $this->getMerchant();
-        return view('merchant.api_credentials', compact('merchant'));
+        $merchantId = $request->input('id');
+        $merchant = $this->getMerchant($merchantId);
+        $userMerchants = Auth::user()->merchants()->latest()->get();
+
+        return view('merchant.api_credentials', compact('merchant', 'userMerchants'));
     }
 
-    public function regenerateKeys()
+    public function regenerateKeys(Request $request)
     {
-        $merchant = $this->getMerchant();
+        $merchantId = $request->input('merchant_id') ?: $request->input('id');
+        $merchant = $this->getMerchant($merchantId);
         $merchant->update([
             'api_key' => 'kp_live_' . Str::random(32),
             'secret_key' => 'kp_sec_' . Str::random(32),
         ]);
 
-        return back()->with('success', 'Kredensial API baru berhasil digenerate!');
+        return back()->with('success', "Kredensial API baru untuk '{$merchant->business_name}' berhasil digenerate!");
     }
 
     public function updateWebhook(Request $request)
@@ -176,12 +267,13 @@ class MerchantDashboardController extends Controller
             'webhook_url' => 'nullable|url|max:255',
         ]);
 
-        $merchant = $this->getMerchant();
+        $merchantId = $request->input('merchant_id') ?: $request->input('id');
+        $merchant = $this->getMerchant($merchantId);
         $merchant->update([
             'webhook_url' => $request->webhook_url,
         ]);
 
-        return back()->with('success', 'Webhook URL berhasil diperbarui!');
+        return back()->with('success', "Webhook URL untuk '{$merchant->business_name}' berhasil diperbarui!");
     }
 
     public function updateGatewayMode(Request $request)

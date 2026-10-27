@@ -8,7 +8,7 @@
     <div>
         <div style="font-size: 13px; font-weight: 700; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px;">Selamat Datang,</div>
         <h1 style="font-size: 24px; font-weight: 800; margin-top: 2px;">{{ $merchant->business_name }}</h1>
-        <div style="font-size: 12.5px; opacity: 0.85; margin-top: 4px; display: flex; align-items: center; gap: 8px;">
+        <div style="font-size: 12.5px; opacity: 0.85; margin-top: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <span>ID Merchant: <b>{{ $merchant->merchant_code }}</b></span>
             <span>•</span>
             <span>Status: <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 999px;">Aktif</span></span>
@@ -18,9 +18,16 @@
                     {{ $merchant->gateway_mode === 'custom' ? 'QRIS Sendiri' : 'Sewa Gateway Kurtech' }}
                 </b>
             </span>
+            <span>•</span>
+            <a href="{{ route('merchant.merchants') }}" style="color: #ffffff; text-decoration: underline; font-weight: 700;">
+                <i class="fa-solid fa-arrows-rotate"></i> Ganti Router ({{ auth()->user()->merchants()->count() }} Terdaftar)
+            </a>
         </div>
     </div>
     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <a href="{{ route('merchant.merchants') }}" class="kp-btn" style="background: rgba(255,255,255,0.2); border: 1.5px solid rgba(255,255,255,0.4); color: #ffffff; padding: 11px 16px; font-size: 13.5px;">
+            <i class="fa-solid fa-store"></i> Kelola Router
+        </a>
         <a href="{{ route('merchant.withdrawal') }}" class="kp-btn" style="background: #ffffff; color: #0284c7; padding: 11px 18px; font-size: 13.5px; box-shadow: 0 4px 14px rgba(0,0,0,0.1);">
             <i class="fa-solid fa-money-bill-transfer"></i> Tarik Saldo Dompet
         </a>

@@ -8,14 +8,41 @@
     <p style="font-size: 13px; color: var(--kp-text-muted);">Gunakan kredensial ini untuk menghubungkan Mikhmon Online, Billing Kurtech, atau Aplikasi Web Anda.</p>
 </div>
 
+<!-- Switcher Multi-Merchant -->
+@if(!empty($userMerchants) && $userMerchants->count() > 1)
+<div style="margin-bottom: 18px; background: #f8fafc; border: 1.5px solid var(--kp-border); border-radius: 14px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+    <div>
+        <div style="font-size: 11.5px; font-weight: 700; color: var(--kp-text-muted); text-transform: uppercase;">Menampilkan Kunci Untuk:</div>
+        <div style="font-size: 15px; font-weight: 800; color: var(--kp-text-main); display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-store" style="color: var(--kp-primary);"></i> {{ $merchant->business_name }} 
+            <span style="font-family: var(--kp-mono); color: var(--kp-primary); font-size: 13px;">({{ $merchant->merchant_code }})</span>
+        </div>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+        <select onchange="window.location.href='{{ route('merchant.api.credentials') }}?id=' + this.value" 
+                style="padding: 8px 14px; border-radius: 10px; border: 1.5px solid var(--kp-border); font-size: 13px; font-weight: 700; background: #fff; cursor: pointer; outline: none;">
+            @foreach($userMerchants as $um)
+                <option value="{{ $um->id }}" {{ $um->id == $merchant->id ? 'selected' : '' }}>
+                    {{ $um->business_name }} ({{ $um->merchant_code }})
+                </option>
+            @endforeach
+        </select>
+        <a href="{{ route('merchant.merchants') }}" class="kp-btn kp-btn-outline" style="padding: 7px 12px; font-size: 12px;">
+            <i class="fa-solid fa-list"></i> Kelola Router
+        </a>
+    </div>
+</div>
+@endif
+
 <!-- API Keys Card -->
 <div class="kp-card">
     <div class="kp-card-header">
         <div class="kp-card-title">
-            <i class="fa-solid fa-key" style="color: var(--kp-primary);"></i> Kunci API Toko Anda
+            <i class="fa-solid fa-key" style="color: var(--kp-primary);"></i> Kunci API: {{ $merchant->business_name }}
         </div>
         <form action="{{ route('merchant.api.regenerate') }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin mengganti API Key? Integrasi lama yang masih menggunakan key lama akan terputus.');">
             @csrf
+            <input type="hidden" name="merchant_id" value="{{ $merchant->id }}">
             <button type="submit" class="kp-btn kp-btn-outline" style="padding: 6px 12px; font-size: 12px; color: var(--kp-danger);">
                 <i class="fa-solid fa-arrows-rotate"></i> Buat Kunci Baru
             </button>
@@ -64,6 +91,7 @@
     <!-- Webhook URL Form -->
     <form action="{{ route('merchant.webhook.update') }}" method="POST">
         @csrf
+        <input type="hidden" name="merchant_id" value="{{ $merchant->id }}">
         <label style="display: block; font-size: 12px; font-weight: 700; color: var(--kp-text-muted); margin-bottom: 4px;">
             URL Webhook Callback (Tujuan Notifikasi Pembayaran Lunas)
         </label>

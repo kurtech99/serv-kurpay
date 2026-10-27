@@ -323,6 +323,9 @@
                         <a href="{{ route('merchant.dashboard') }}" class="kp-nav-link {{ request()->routeIs('merchant.dashboard') ? 'active' : '' }}">
                             <i class="fa-solid fa-house"></i> Dashboard
                         </a>
+                        <a href="{{ route('merchant.merchants') }}" class="kp-nav-link {{ request()->routeIs('merchant.merchants*') ? 'active' : '' }}">
+                            <i class="fa-solid fa-store"></i> Merchant
+                        </a>
                         <a href="{{ route('merchant.withdrawal') }}" class="kp-nav-link {{ request()->routeIs('merchant.withdrawal') ? 'active' : '' }}">
                             <i class="fa-solid fa-wallet"></i> Tarik Saldo
                         </a>
@@ -394,6 +397,10 @@
                 <a href="{{ route('merchant.dashboard') }}" class="kp-mobile-nav-item {{ request()->routeIs('merchant.dashboard') ? 'active' : '' }}">
                     <i class="fa-solid fa-house"></i>
                     <span>Dashboard</span>
+                </a>
+                <a href="{{ route('merchant.merchants') }}" class="kp-mobile-nav-item {{ request()->routeIs('merchant.merchants*') ? 'active' : '' }}">
+                    <i class="fa-solid fa-store"></i>
+                    <span>Merchant</span>
                 </a>
                 <a href="{{ route('merchant.withdrawal') }}" class="kp-mobile-nav-item {{ request()->routeIs('merchant.withdrawal') ? 'active' : '' }}">
                     <i class="fa-solid fa-wallet"></i>

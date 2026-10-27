@@ -24,6 +24,10 @@ Route::get('/pay/{trx_id}/status', [PaymentController::class, 'checkStatus'])->n
 // Merchant / Tenant Portal
 Route::middleware(['auth'])->prefix('merchant')->name('merchant.')->group(function () {
     Route::get('/', [MerchantDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/merchants', [MerchantDashboardController::class, 'merchants'])->name('merchants');
+    Route::post('/merchants', [MerchantDashboardController::class, 'storeMerchant'])->name('merchants.store');
+    Route::get('/merchants/{id}/switch', [MerchantDashboardController::class, 'switchMerchant'])->name('merchants.switch');
+    Route::delete('/merchants/{id}', [MerchantDashboardController::class, 'deleteMerchant'])->name('merchants.delete');
     Route::get('/withdrawal', [MerchantDashboardController::class, 'withdrawal'])->name('withdrawal');
     Route::post('/withdrawal', [MerchantDashboardController::class, 'submitWithdrawal'])->name('withdrawal.submit');
     Route::post('/bank', [MerchantDashboardController::class, 'updateBank'])->name('bank.update');
