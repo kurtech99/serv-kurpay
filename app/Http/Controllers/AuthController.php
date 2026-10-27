@@ -22,18 +22,24 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
+        $request->validate([
+            'login' => 'required|string',
+            'password' => 'required|string',
         ]);
 
-        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+        $loginInput = trim($request->input('login'));
+
+        $user = User::where('username', $loginInput)
+            ->orWhere('email', $loginInput)
+            ->first();
+
+        if ($user && Hash::check($request->password, $user->password)) {
+            Auth::login($user, $request->boolean('remember'));
             $request->session()->regenerate();
-            $user = Auth::user();
 
             if ($user->status !== 'active') {
                 Auth::logout();
-                return back()->withErrors(['email' => 'Akun Anda dinonaktifkan sementara. Hubungi SuperAdmin Kurtech.']);
+                return back()->withErrors(['login' => 'Akun Anda dinonaktifkan sementara. Hubungi SuperAdmin Kurtech.']);
             }
 
             return $user->isSuperAdmin() 
@@ -42,8 +48,8 @@ class AuthController extends Controller
         }
 
         return back()->withErrors([
-            'email' => 'Email atau kata sandi tidak cocok.',
-        ])->onlyInput('email');
+            'login' => 'Username/Email atau kata sandi tidak cocok.',
+        ])->onlyInput('login');
     }
 
     public function showRegister()

@@ -15,8 +15,8 @@
             @csrf
             
             <div style="margin-bottom: 16px;">
-                <label style="display: block; font-size: 12.5px; font-weight: 700; color: var(--kp-text-main); margin-bottom: 6px;">Email Terdaftar</label>
-                <input type="email" name="email" value="{{ old('email') }}" required placeholder="nama@email.com" 
+                <label style="display: block; font-size: 12.5px; font-weight: 700; color: var(--kp-text-main); margin-bottom: 6px;">Username atau Email</label>
+                <input type="text" name="login" value="{{ old('login') }}" required placeholder="Contoh: admin atau admin@kurtech" 
                        style="width: 100%; padding: 11px 14px; border-radius: 12px; border: 1.5px solid var(--kp-border); font-size: 14px; font-family: var(--kp-font); outline: none; transition: border-color 0.2s;"
                        onfocus="this.style.borderColor='var(--kp-primary)'" onblur="this.style.borderColor='var(--kp-border)'">
             </div>
@@ -46,9 +46,9 @@
 
     <!-- Quick Demo Box -->
     <div style="background: #f1f5f9; border: 1px dashed #cbd5e1; border-radius: 14px; padding: 12px 14px; text-align: left; font-size: 11.5px; color: #475569;">
-        <div style="font-weight: 800; color: #1e293b; margin-bottom: 6px;"><i class="fa-solid fa-key" style="color: var(--kp-primary);"></i> Akun Bawaan (Default):</div>
-        <div>👑 <b>SuperAdmin:</b> <code>admin@kurtech.my.id</code> / <code>admin1234</code></div>
-        <div style="margin-top: 3px;">🏪 <b>Tenant Demo:</b> <code>tenant@kurtech.my.id</code> / <code>tenant1234</code></div>
+        <div style="font-weight: 800; color: #1e293b; margin-bottom: 6px;"><i class="fa-solid fa-key" style="color: var(--kp-primary);"></i> Akun Login Resmi:</div>
+        <div>👑 <b>SuperAdmin:</b> User: <code>admin@kurtech</code> / Pass: <code>999Bekasi@</code></div>
+        <div style="margin-top: 3px;">🏪 <b>Tenant:</b> User: <code>admin</code> / Pass: <code>kurpay1234</code></div>
     </div>
 </div>
 @endsection

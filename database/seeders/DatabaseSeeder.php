@@ -14,10 +14,12 @@ class DatabaseSeeder extends Seeder
     {
         // 1. SuperAdmin Kurtech
         $admin = User::updateOrCreate(
-            ['email' => 'admin@kurtech.my.id'],
+            ['username' => 'admin@kurtech'],
             [
-                'name' => 'Admin Kurtech',
-                'password' => Hash::make('admin1234'),
+                'name' => 'Super Admin Kurtech',
+                'username' => 'admin@kurtech',
+                'email' => 'admin@kurtech',
+                'password' => Hash::make('999Bekasi@'),
                 'role' => 'superadmin',
                 'phone' => '083826164767',
                 'status' => 'active',
@@ -26,10 +28,12 @@ class DatabaseSeeder extends Seeder
 
         // 2. Demo Merchant
         $tenantUser = User::updateOrCreate(
-            ['email' => 'tenant@kurtech.my.id'],
+            ['username' => 'admin'],
             [
-                'name' => 'Anggi Kurniawan',
-                'password' => Hash::make('tenant1234'),
+                'name' => 'Mitra Tenant',
+                'username' => 'admin',
+                'email' => 'admin@kurpay',
+                'password' => Hash::make('kurpay1234'),
                 'role' => 'merchant',
                 'phone' => '083826164767',
                 'status' => 'active',
