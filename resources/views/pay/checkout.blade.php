@@ -317,11 +317,11 @@
                 <span style="font-size: 9.5px; font-weight: 700; opacity: 0.9; text-transform: uppercase;">Pembayaran Nasional</span>
             </div>
 
-            <!-- Dynamic QR Canvas (Auto-Nominal Lock) -->
-            <canvas id="qrCodeCanvas" class="qr-image" style="width: 240px; height: 240px; margin: 0 auto; display: block; border-radius: 6px;"></canvas>
+            <!-- Dynamic QR Image (Direct API Image - No JS Dependency) -->
+            <img id="qrCodeImg" src="https://api.qrserver.com/v1/create-qr-code/?size=350x350&data={{ urlencode($qrString) }}" alt="QRIS Standar Indonesia" class="qr-image" style="width: 240px; height: 240px; margin: 0 auto; display: block; border-radius: 6px;">
 
-            <!-- Fallback Image if JS Canvas is disabled -->
-            <img id="qrCodeFallback" src="https://api.qrserver.com/v1/create-qr-code/?size=350x350&data={{ urlencode($qrString) }}" alt="QRIS Standar Indonesia" class="qr-image" style="display: none; width: 240px; height: 240px; margin: 0 auto; border-radius: 6px;">
+            <!-- Dynamic QR Canvas (Local rendering via QRious) -->
+            <canvas id="qrCodeCanvas" class="qr-image" style="display: none; width: 240px; height: 240px; margin: 0 auto; border-radius: 6px;"></canvas>
 
             <div style="background: #ecfdf5; color: #047857; font-size: 11px; font-weight: 800; border-radius: 20px; padding: 4px 10px; margin-top: 10px; display: inline-flex; align-items: center; gap: 5px; border: 1px solid #a7f3d0;">
                 <i class="fa-solid fa-bolt" style="color: #059669;"></i> QRIS Dinamis Otomatis Nominal
@@ -413,23 +413,22 @@
     const callbackUrl = "{{ $trx->callback_url }}";
     const qrString = @json($qrString);
 
-    // Render Dynamic QRIS Canvas
+    // Render Dynamic QRIS Canvas (Upgrades static image to crisp local canvas)
     try {
-        if (typeof QRious !== 'undefined' && qrString) {
+        const canvas = document.getElementById('qrCodeCanvas');
+        const img = document.getElementById('qrCodeImg');
+        if (typeof QRious !== 'undefined' && qrString && canvas) {
             new QRious({
-                element: document.getElementById('qrCodeCanvas'),
+                element: canvas,
                 value: qrString,
                 size: 320,
                 level: 'M'
             });
-        } else {
-            document.getElementById('qrCodeCanvas').style.display = 'none';
-            document.getElementById('qrCodeFallback').style.display = 'block';
+            canvas.style.display = 'block';
+            if (img) img.style.display = 'none';
         }
     } catch (e) {
         console.error('QRious render error:', e);
-        document.getElementById('qrCodeCanvas').style.display = 'none';
-        document.getElementById('qrCodeFallback').style.display = 'block';
     }
 
     // Copy Amount
