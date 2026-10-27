@@ -43,12 +43,5 @@
             Belum punya akun gateway? <a href="{{ route('register') }}" style="color: var(--kp-primary); font-weight: 700; text-decoration: none;">Daftar Tenant</a>
         </div>
     </div>
-
-    <!-- Quick Demo Box -->
-    <div style="background: #f1f5f9; border: 1px dashed #cbd5e1; border-radius: 14px; padding: 12px 14px; text-align: left; font-size: 11.5px; color: #475569;">
-        <div style="font-weight: 800; color: #1e293b; margin-bottom: 6px;"><i class="fa-solid fa-key" style="color: var(--kp-primary);"></i> Akun Login Resmi:</div>
-        <div>👑 <b>SuperAdmin:</b> User: <code>admin@kurtech</code> / Pass: <code>999Bekasi@</code></div>
-        <div style="margin-top: 3px;">🏪 <b>Tenant:</b> User: <code>admin</code> / Pass: <code>kurpay1234</code></div>
-    </div>
 </div>
 @endsection
