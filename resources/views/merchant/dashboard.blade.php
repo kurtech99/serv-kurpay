@@ -221,25 +221,38 @@
         <form action="{{ route('merchant.deposit.topup') }}" method="POST">
             @csrf
 
-            <label style="display: block; font-size: 12px; font-weight: 700; color: var(--kp-text-main); margin-bottom: 6px;">Pilih Nominal Top Up Saldo Deposit:</label>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px;">
-                <button type="button" class="kp-btn" style="background: #f8fafc; border: 1.5px solid #cbd5e1; color: #0f172a; padding: 8px 4px; font-size: 11.5px; font-weight: 700;" onclick="setDepositAmount(10000)">
+            <label style="display: block; font-size: 12px; font-weight: 700; color: var(--kp-text-main); margin-bottom: 6px;">
+                Pilih Cepat atau Ketik Nominal Manual (Min. Rp 5.000):
+            </label>
+            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 12px;">
+                <button type="button" class="kp-btn btn-deposit-preset" style="background: #eff6ff; border: 1.5px solid #bfdbfe; color: #1d4ed8; padding: 8px 2px; font-size: 11px; font-weight: 800; border-radius: 8px;" onclick="setDepositAmount(5000, this)">
+                    Rp 5.000
+                </button>
+                <button type="button" class="kp-btn btn-deposit-preset" style="background: #f8fafc; border: 1.5px solid #cbd5e1; color: #0f172a; padding: 8px 2px; font-size: 11px; font-weight: 700; border-radius: 8px;" onclick="setDepositAmount(10000, this)">
                     Rp 10.000
                 </button>
-                <button type="button" class="kp-btn" style="background: #f8fafc; border: 1.5px solid #cbd5e1; color: #0f172a; padding: 8px 4px; font-size: 11.5px; font-weight: 700;" onclick="setDepositAmount(25000)">
+                <button type="button" class="kp-btn btn-deposit-preset" style="background: #f8fafc; border: 1.5px solid #cbd5e1; color: #0f172a; padding: 8px 2px; font-size: 11px; font-weight: 700; border-radius: 8px;" onclick="setDepositAmount(25000, this)">
                     Rp 25.000
                 </button>
-                <button type="button" class="kp-btn" style="background: #f8fafc; border: 1.5px solid #cbd5e1; color: #0f172a; padding: 8px 4px; font-size: 11.5px; font-weight: 700;" onclick="setDepositAmount(50000)">
+                <button type="button" class="kp-btn btn-deposit-preset" style="background: #f8fafc; border: 1.5px solid #cbd5e1; color: #0f172a; padding: 8px 2px; font-size: 11px; font-weight: 700; border-radius: 8px;" onclick="setDepositAmount(50000, this)">
                     Rp 50.000
                 </button>
-                <button type="button" class="kp-btn" style="background: #f8fafc; border: 1.5px solid #cbd5e1; color: #0f172a; padding: 8px 4px; font-size: 11.5px; font-weight: 700;" onclick="setDepositAmount(100000)">
+                <button type="button" class="kp-btn btn-deposit-preset" style="background: #f8fafc; border: 1.5px solid #cbd5e1; color: #0f172a; padding: 8px 2px; font-size: 11px; font-weight: 700; border-radius: 8px;" onclick="setDepositAmount(100000, this)">
                     Rp 100.000
                 </button>
             </div>
 
             <div style="margin-bottom: 16px;">
-                <input type="number" id="depositAmountInput" name="amount" value="25000" min="5000" max="1000000" required placeholder="Masukkan nominal (Min. Rp 5.000)" style="width: 100%; padding: 10px 14px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 14px; font-family: var(--kp-mono); font-weight: 700;">
-                <div style="font-size: 11px; color: var(--kp-text-muted); margin-top: 4px;">Top Up Rp 25.000 cukup untuk kuota penjualan voucher hingga <b>Rp 8.333.000</b>!</div>
+                <label style="display: block; font-size: 11.5px; font-weight: 700; color: var(--kp-text-muted); margin-bottom: 4px;">
+                    Nominal Top Up (Bisa Diketik Bebas):
+                </label>
+                <div style="position: relative;">
+                    <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-weight: 800; font-size: 13.5px; color: var(--kp-text-muted);">Rp</span>
+                    <input type="number" id="depositAmountInput" name="amount" value="5000" min="5000" max="10000000" step="1000" required placeholder="5000" style="width: 100%; padding: 10px 14px 10px 38px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-size: 15px; font-family: var(--kp-mono); font-weight: 800;" oninput="updateDepositCalc(this.value)">
+                </div>
+                <div id="depositCalcHint" style="font-size: 11.5px; color: #059669; font-weight: 600; margin-top: 5px;">
+                    <i class="fa-solid fa-calculator"></i> Kuota omset voucher yang didapat: <b>Rp 1.666.666</b> (Fee 0.3%)
+                </div>
             </div>
 
             <button type="submit" class="kp-btn kp-btn-success" style="width: 100%; padding: 11px; font-size: 13.5px;">
@@ -341,10 +354,33 @@ function toggleCustomFields(isCustom) {
     }
 }
 
-function setDepositAmount(amount) {
+function setDepositAmount(amount, btn) {
     const input = document.getElementById('depositAmountInput');
     if (input) {
         input.value = amount;
+        updateDepositCalc(amount);
+    }
+    document.querySelectorAll('.btn-deposit-preset').forEach(b => {
+        b.style.background = '#f8fafc';
+        b.style.borderColor = '#cbd5e1';
+        b.style.color = '#0f172a';
+    });
+    if (btn) {
+        btn.style.background = '#eff6ff';
+        btn.style.borderColor = '#bfdbfe';
+        btn.style.color = '#1d4ed8';
+    }
+}
+
+function updateDepositCalc(val) {
+    const amt = parseFloat(val) || 0;
+    const hint = document.getElementById('depositCalcHint');
+    if (!hint) return;
+    if (amt < 5000) {
+        hint.innerHTML = '<span style="color: #dc2626;"><i class="fa-solid fa-triangle-exclamation"></i> Minimal top up adalah Rp 5.000</span>';
+    } else {
+        const omset = Math.round(amt / 0.003);
+        hint.innerHTML = '<i class="fa-solid fa-calculator"></i> Kuota omset voucher yang didapat: <b>Rp ' + omset.toLocaleString('id-ID') + '</b> (Fee 0.3%)';
     }
 }
 
