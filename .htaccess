@@ -1,0 +1,26 @@
+﻿# ==============================================================================
+# 🛡️ KURTECH LARAVEL PORTAL ROOT SECURITY (.HTACCESS)
+# Mengarahkan traffic ke /public dan memblokir akses ke file .env & source code
+# ==============================================================================
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # 1. Blokir Akses ke File Sensitif (.env, .git, composer, storage logs)
+    <FilesMatch "(^\.|\.(env|json|lock|yml|yaml|xml|md|sql|log|sh|bat|ps1))$">
+        <IfModule mod_authz_core.c>
+            Require all denied
+        </IfModule>
+        <IfModule !mod_authz_core.c>
+            Order deny,allow
+            Deny from all
+        </IfModule>
+    </FilesMatch>
+
+    # 2. Redirect semua request publik ke folder public/ jika DocumentRoot di root folder
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/ [L]
+</IfModule>
+
+# Matikan Directory Browsing
+Options -Indexes

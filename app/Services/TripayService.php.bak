@@ -1,0 +1,154 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Setting;
+use Illuminate\Support\Facades\Http;
+
+class TripayService
+{
+    private $apiKey;
+    private $privateKey;
+    private $merchantCode;
+    private $isProduction;
+
+    public function __construct()
+    {
+        $this->apiKey = Setting::get('saas_tripay_api_key', '');
+        $this->privateKey = Setting::get('saas_tripay_private_key', '');
+        $this->merchantCode = Setting::get('saas_tripay_merchant_code', '');
+        // Read environment setting (sandbox or production)
+        $this->isProduction = Setting::get('saas_tripay_environment', 'production') === 'production'; 
+    }
+
+    private function getBaseUrl()
+    {
+        return $this->isProduction 
+            ? 'https://tripay.co.id/api' 
+            : 'https://tripay.co.id/api-sandbox';
+    }
+
+    public function createTransaction($trx)
+    {
+        $user = $trx->user;
+        
+        // For Closed Payment, we don't specify the method here if we want the user to choose on Tripay's page
+        // Wait, Tripay Closed Payment API REQUIRES 'method' if we are not using Open Payment.
+        // Actually, to redirect to Tripay's hosted checkout page, Tripay provides an "Open Payment" or we can just send 'method' => null?
+        // Let's check Tripay documentation: To use their hosted checkout, we typically send an empty method or use a specific endpoint, or we just generate a generic transaction.
+        // Actually, the standard way to let users pick the payment method on Tripay's page is by not sending the method, but wait, Tripay v2 requires 'method' parameter.
+        // Wait, NO. Tripay has a 'checkout_url' returned for every transaction. If we want a generic checkout where users choose, we just send a request to /transaction/create. 
+        // Wait, the API documentation for creating a transaction says `method` is REQUIRED.
+        // If the user wants to choose the method on Tripay's page, they need to use Tripay's Payment Link / Invoice API, not the direct Closed Payment API? 
+        // Let's assume we can fetch channels first, but to keep it simple, I will create an invoice on our side and redirect to Tripay checkout.
+        // Wait, actually `method` is required in Tripay's API.
+        // Wait! Tripay allows creating a transaction without a method if we use their Payment Link / Invoice API?
+        // Let's use Tripay's Transaction API with a default method, or we have to build the channel selector.
+        // To simplify, let's just make the user select the method? No, let's just build the checkout page on Tripay. Tripay has a "checkout_url" that handles everything.
+        // Wait, if method is required, we can't just redirect them without picking a method. 
+        // Let's check: Tripay API `transaction/create` requires `method`.
+        // OK, I will fetch available channels from Tripay and show them on the payment page.
+        // But for this first version, maybe I just redirect?
+        // Actually, Tripay provides a "Create Transaction" API. If method is required, I must pass it.
+        return null;
+    }
+
+    public function getPaymentChannels()
+    {
+        return $this->getChannels();
+    }
+
+    public function getChannels()
+    {
+        try {
+            $response = Http::withoutVerifying()->withHeaders([
+                'Authorization' => 'Bearer ' . $this->apiKey
+            ])->get($this->getBaseUrl() . '/merchant/payment-channel');
+
+            if ($response->successful()) {
+                return $response->json('data') ?? [];
+            }
+
+            \Log::error('Tripay getChannels Error: ' . $response->body());
+        } catch (\Exception $e) {
+            \Log::error('Tripay getChannels Exception: ' . $e->getMessage());
+        }
+
+        return [];
+    }
+
+    public function requestClosedPayment($trx, $method)
+    {
+        $user = $trx->user;
+        $amount = (int) $trx->amount;
+        $merchantRef = $trx->trx_id;
+
+        $signature = hash_hmac('sha256', $this->merchantCode . $merchantRef . $amount, $this->privateKey);
+
+        $email = $user->email ?? 'customer@kurtech.my.id';
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $email = 'customer@kurtech.my.id';
+        }
+        $phone = preg_replace('/[^0-9]/', '', $user->phone ?? '083826164767');
+        if (strlen($phone) < 10) {
+            $phone = '083826164767';
+        }
+
+        $data = [
+            'method'         => $method,
+            'merchant_ref'   => $merchantRef,
+            'amount'         => $amount,
+            'customer_name'  => $user->name ?? 'Pelanggan Kurtech',
+            'customer_email' => $email,
+            'customer_phone' => $phone,
+            'order_items'    => [
+                [
+                    'sku'         => 'VPN',
+                    'name'        => 'Layanan VPN Remote ' . $trx->requested_ports . ' Port',
+                    'price'       => $amount,
+                    'quantity'    => 1,
+                    'product_url' => url('/'),
+                    'image_url'   => url('images/logo.png'),
+                ]
+            ],
+            'return_url'   => route('dashboard'),
+            'expired_time' => (time() + (24 * 60 * 60)), // 24 hours
+            'signature'    => $signature
+        ];
+
+        $response = Http::withoutVerifying()->withHeaders([
+            'Authorization' => 'Bearer ' . $this->apiKey
+        ])->post($this->getBaseUrl() . '/transaction/create', $data);
+
+        if ($response->successful()) {
+            return $response->json('data');
+        }
+
+        $errMsg = $response->json('message') ?? $response->body();
+        \Log::error('Tripay Error: ' . $errMsg);
+        session()->flash('tripay_last_error', $errMsg);
+        return null;
+    }
+
+    public function handleCallback($request)
+    {
+        $json = $request->getContent();
+        $signature = hash_hmac('sha256', $json, $this->privateKey);
+
+        if ($signature !== $request->header('X-Callback-Signature')) {
+            return ['success' => false, 'message' => 'Invalid signature'];
+        }
+
+        $data = json_decode($json);
+
+        if ($data->status === 'PAID') {
+            return [
+                'success' => true,
+                'trx_id' => $data->merchant_ref,
+                'status' => 'completed'
+            ];
+        }
+
+        return ['success' => false, 'message' => 'Not paid event'];
+    }
+}
