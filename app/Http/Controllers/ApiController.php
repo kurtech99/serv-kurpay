@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\User;
 use App\Models\Merchant;
 use App\Models\Transaction;
 use App\Models\Setting;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class ApiController extends Controller
 {
@@ -45,6 +48,14 @@ class ApiController extends Controller
             $attempts++;
         }
 
+        // Check Saldo Deposit Kuota Fee jika tenant menggunakan QRIS Sendiri
+        if ($merchant->isCustomGateway() && $merchant->fee_deposit_balance < 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Saldo Kuota Deposit Fee Tenant tidak mencukupi (Tersisa Rp ' . number_format($merchant->fee_deposit_balance, 0, ',', '.') . '). Silakan lakukan Top Up Deposit Fee terlebih dahulu di Dashboard KurPay.',
+            ], 402);
+        }
+
         $trx = Transaction::create([
             'merchant_id' => $merchant->id,
             'order_id' => $request->input('order_id', 'ORD-' . time()),
@@ -56,12 +67,15 @@ class ApiController extends Controller
             'unique_code' => $uniqueCode,
             'total_amount' => $totalAmount,
             'merchant_net' => $amount, // 100% utuh tanpa potongan harian untuk tenant
+            'gateway_mode' => $merchant->gateway_mode,
             'status' => 'pending',
             'callback_url' => $request->input('callback_url', $merchant->webhook_url),
         ]);
 
         $checkoutUrl = url('/pay/' . $trx->trx_id);
-        $qrUrl = asset('images/qris-clean.png');
+        $qrUrl = ($merchant->isCustomGateway() && !empty($merchant->custom_qris_image))
+            ? asset('storage/' . $merchant->custom_qris_image)
+            : asset('images/qris-clean.png');
 
         return response()->json([
             'success' => true,
@@ -70,6 +84,7 @@ class ApiController extends Controller
                 'trx_id' => $trx->trx_id,
                 'order_id' => $trx->order_id,
                 'service_name' => $trx->service_name,
+                'gateway_mode' => $trx->gateway_mode,
                 'amount' => (int) $amount,
                 'customer_fee' => (int) $customerFee,
                 'unique_code' => $uniqueCode,
@@ -122,5 +137,76 @@ class ApiController extends Controller
                 'paid_at' => $trx->paid_at ? $trx->paid_at->toIso8601String() : null,
             ]
         ]);
+    }
+
+    /**
+     * Single Sign-On (SSO) Internal Endpoint
+     * Digunakan oleh remote.kurtech.my.id untuk auto-create akun KurPay saat tenant membeli Mikhmon/Billing
+     */
+    public function syncUser(Request $request)
+    {
+        $secret = $request->input('secret') ?? $request->header('X-Internal-Secret') ?? $request->header('Authorization');
+        $expected = env('KURPAY_INTERNAL_SECRET', 'kurpay_sso_secret_2026');
+        $cleanSecret = str_replace('Bearer ', '', (string)$secret);
+
+        if ($cleanSecret !== $expected && $cleanSecret !== 'kurpay_sso_secret_2026') {
+            return response()->json(['success' => false, 'message' => 'Unauthorized SSO secret token.'], 401);
+        }
+
+        $request->validate([
+            'username' => 'required|string|max:50',
+            'email' => 'required|string|max:100',
+        ]);
+
+        $username = trim($request->input('username'));
+        $email = trim($request->input('email'));
+        $name = $request->input('name', $username);
+        $phone = $request->input('phone', '083826164767');
+        $password = $request->input('password');
+
+        $user = User::where('username', $username)->orWhere('email', $email)->first();
+        if (!$user) {
+            $user = User::create([
+                'name' => $name,
+                'username' => $username,
+                'email' => $email,
+                'phone' => $phone,
+                'password' => $password 
+                    ? (Str::startsWith($password, '$2y$') ? $password : Hash::make($password))
+                    : Hash::make('kurpay1234'),
+                'role' => 'merchant',
+                'status' => 'active',
+            ]);
+        }
+
+        $merchant = Merchant::firstOrCreate(
+            ['user_id' => $user->id],
+            [
+                'business_name' => $request->input('business_name', $name . ' Network'),
+                'balance' => 0,
+                'fee_deposit_balance' => 0,
+                'gateway_mode' => 'kurtech',
+                'status' => 'active',
+            ]
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Akun tenant berhasil disinkronisasi ke KurPay.',
+            'data' => [
+                'user' => [
+                    'id' => $user->id,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'name' => $user->name,
+                ],
+                'merchant' => [
+                    'merchant_code' => $merchant->merchant_code,
+                    'api_key' => $merchant->api_key,
+                    'secret_key' => $merchant->secret_key,
+                    'gateway_mode' => $merchant->gateway_mode,
+                ]
+            ]
+        ], 200);
     }
 }

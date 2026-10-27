@@ -25,14 +25,37 @@ class Merchant extends Model
         'auto_withdraw_target',
         'auto_withdraw_weekend',
         'status',
+        'gateway_mode',
+        'custom_qris_image',
+        'custom_nmid',
+        'custom_qris_name',
+        'fee_deposit_balance',
     ];
 
     protected $casts = [
         'balance' => 'decimal:2',
+        'fee_deposit_balance' => 'decimal:2',
         'auto_withdraw_enabled' => 'boolean',
         'auto_withdraw_target' => 'decimal:2',
         'auto_withdraw_weekend' => 'boolean',
     ];
+
+    public function isCustomGateway(): bool
+    {
+        return $this->gateway_mode === 'custom';
+    }
+
+    public function addFeeDeposit($amount): void
+    {
+        $this->fee_deposit_balance += (float)$amount;
+        $this->save();
+    }
+
+    public function deductFeeDeposit($amount): void
+    {
+        $this->fee_deposit_balance -= (float)$amount;
+        $this->save();
+    }
 
     public function user()
     {

@@ -23,6 +23,9 @@ class Transaction extends Model
         'total_amount',
         'merchant_net',
         'status',
+        'gateway_mode',
+        'is_deposit_topup',
+        'deposit_fee_deducted',
         'callback_url',
         'callback_status',
         'callback_response',
@@ -36,6 +39,8 @@ class Transaction extends Model
         'unique_code' => 'integer',
         'total_amount' => 'decimal:2',
         'merchant_net' => 'decimal:2',
+        'deposit_fee_deducted' => 'decimal:2',
+        'is_deposit_topup' => 'boolean',
         'paid_at' => 'datetime',
         'expired_at' => 'datetime',
     ];

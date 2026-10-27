@@ -67,8 +67,15 @@ class AuthController extends Controller
             'password' => 'required|string|min:6|confirmed',
         ]);
 
+        $username = $request->input('username') ?: explode('@', $request->email)[0];
+        $username = preg_replace('/[^a-zA-Z0-9_\-\.]/', '', $username);
+        if (User::where('username', $username)->exists()) {
+            $username = $username . rand(10, 99);
+        }
+
         $user = User::create([
             'name' => $request->name,
+            'username' => $username,
             'email' => $request->email,
             'phone' => $request->phone,
             'password' => Hash::make($request->password),
@@ -81,6 +88,8 @@ class AuthController extends Controller
             'user_id' => $user->id,
             'business_name' => $request->business_name,
             'balance' => 0,
+            'gateway_mode' => 'kurtech',
+            'fee_deposit_balance' => 0,
             'status' => 'active',
         ]);
 

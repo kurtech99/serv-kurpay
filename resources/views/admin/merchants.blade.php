@@ -16,6 +16,7 @@
                     <tr style="border-bottom: 1.5px solid var(--kp-border); text-align: left; color: var(--kp-text-muted);">
                         <th style="padding: 10px 8px;">Kode</th>
                         <th style="padding: 10px 8px;">Nama Usaha / Tenant</th>
+                        <th style="padding: 10px 8px;">Mode Gateway</th>
                         <th style="padding: 10px 8px;">Kontak WhatsApp</th>
                         <th style="padding: 10px 8px;">Saldo Dompet</th>
                         <th style="padding: 10px 8px;">Rekening Pencairan</th>
@@ -32,6 +33,20 @@
                             <td style="padding: 12px 8px; font-weight: 700;">
                                 {{ $m->business_name }}<br>
                                 <span style="font-size: 11.5px; color: var(--kp-text-muted); font-weight: normal;">{{ $m->user ? $m->user->name : '-' }}</span>
+                            </td>
+                            <td style="padding: 12px 8px;">
+                                @if($m->gateway_mode === 'custom')
+                                    <span style="background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; display: inline-block; margin-bottom: 3px;">
+                                        QRIS Sendiri
+                                    </span><br>
+                                    <span style="font-size: 11px; font-family: var(--kp-mono); color: #d97706; font-weight: 700;">
+                                        Dep: Rp {{ number_format($m->fee_deposit_balance, 0, ',', '.') }}
+                                    </span>
+                                @else
+                                    <span style="background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 800;">
+                                        Gateway Kurtech
+                                    </span>
+                                @endif
                             </td>
                             <td style="padding: 12px 8px; font-family: var(--kp-mono); font-size: 12.5px;">
                                 <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $m->user ? $m->user->phone : '') }}" target="_blank" style="color: var(--kp-success); text-decoration: none;">

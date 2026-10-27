@@ -13,11 +13,19 @@ class PaymentController extends Controller
         $trx = Transaction::with('merchant')->where('trx_id', $trxId)->firstOrFail();
 
         $merchant = $trx->merchant;
-        $qrisImage = asset('images/qris-clean.png');
-        $merchantName = Setting::get('merchant_qris_name', 'kurtech');
-        $nmid = Setting::get('merchant_nmid', 'ID1025414745014');
+        if ($merchant && $merchant->isCustomGateway() && !empty($merchant->custom_qris_image)) {
+            $qrisImage = asset('storage/' . $merchant->custom_qris_image);
+            $merchantName = $merchant->custom_qris_name ?: $merchant->business_name;
+            $nmid = $merchant->custom_nmid ?: '-';
+            $isCustom = true;
+        } else {
+            $qrisImage = asset('images/qris-clean.png');
+            $merchantName = Setting::get('merchant_qris_name', 'kurtech');
+            $nmid = Setting::get('merchant_nmid', 'ID1025414745014');
+            $isCustom = false;
+        }
 
-        return view('pay.checkout', compact('trx', 'merchant', 'qrisImage', 'merchantName', 'nmid'));
+        return view('pay.checkout', compact('trx', 'merchant', 'qrisImage', 'merchantName', 'nmid', 'isCustom'));
     }
 
     public function checkStatus($trxId)

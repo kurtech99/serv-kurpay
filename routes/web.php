@@ -31,6 +31,8 @@ Route::middleware(['auth'])->prefix('merchant')->name('merchant.')->group(functi
     Route::get('/api-credentials', [MerchantDashboardController::class, 'apiCredentials'])->name('api.credentials');
     Route::post('/regenerate-keys', [MerchantDashboardController::class, 'regenerateKeys'])->name('api.regenerate');
     Route::post('/webhook', [MerchantDashboardController::class, 'updateWebhook'])->name('webhook.update');
+    Route::post('/gateway-mode', [MerchantDashboardController::class, 'updateGatewayMode'])->name('gateway.update');
+    Route::post('/deposit/topup', [MerchantDashboardController::class, 'topupDeposit'])->name('deposit.topup');
 });
 
 // SuperAdmin Portal (Khusus Admin Kurtech)

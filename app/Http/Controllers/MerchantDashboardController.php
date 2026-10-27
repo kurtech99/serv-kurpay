@@ -183,4 +183,75 @@ class MerchantDashboardController extends Controller
 
         return back()->with('success', 'Webhook URL berhasil diperbarui!');
     }
+
+    public function updateGatewayMode(Request $request)
+    {
+        $merchant = $this->getMerchant();
+
+        $request->validate([
+            'gateway_mode' => 'required|in:kurtech,custom',
+            'custom_nmid' => 'nullable|string|max:50',
+            'custom_qris_name' => 'nullable|string|max:100',
+            'custom_qris_image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:3072',
+        ]);
+
+        $data = [
+            'gateway_mode' => $request->gateway_mode,
+            'custom_nmid' => $request->custom_nmid,
+            'custom_qris_name' => $request->custom_qris_name,
+        ];
+
+        if ($request->hasFile('custom_qris_image')) {
+            $path = $request->file('custom_qris_image')->store('qris_merchants', 'public');
+            $data['custom_qris_image'] = $path;
+        }
+
+        $merchant->update($data);
+
+        $msg = $request->gateway_mode === 'custom' 
+            ? 'Metode gateway berhasil diubah ke: Pakai QRIS Sendiri. Pastikan saldo kuota deposit fee Anda mencukupi!' 
+            : 'Metode gateway berhasil diubah ke: Sewa Gateway Kurtech (Default).';
+
+        return back()->with('success', $msg);
+    }
+
+    public function topupDeposit(Request $request)
+    {
+        $merchant = $this->getMerchant();
+
+        $request->validate([
+            'amount' => 'required|numeric|min:5000|max:1000000',
+        ]);
+
+        $amount = (float) $request->amount;
+        $uniqueCode = rand(111, 899);
+        $totalAmount = $amount + $uniqueCode;
+
+        // Check clash
+        $attempts = 0;
+        while (Transaction::where('status', 'pending')->where('total_amount', $totalAmount)->exists() && $attempts < 10) {
+            $uniqueCode = rand(111, 899);
+            $totalAmount = $amount + $uniqueCode;
+            $attempts++;
+        }
+
+        $trx = Transaction::create([
+            'merchant_id' => $merchant->id,
+            'order_id' => 'DEP-' . time(),
+            'service_name' => 'Top Up Saldo Kuota Deposit Fee KurPay',
+            'customer_name' => $merchant->user->name ?? 'Mitra KurPay',
+            'customer_phone' => $merchant->user->phone ?? '083826164767',
+            'amount' => $amount,
+            'customer_fee' => 0,
+            'unique_code' => $uniqueCode,
+            'total_amount' => $totalAmount,
+            'merchant_net' => $amount,
+            'gateway_mode' => 'kurtech', // Top up selalu bayar ke QRIS resmi Kurtech
+            'is_deposit_topup' => true,
+            'status' => 'pending',
+            'callback_url' => route('merchant.dashboard'),
+        ]);
+
+        return redirect()->route('pay.checkout', $trx->trx_id)->with('info', 'Silakan scan QRIS untuk menyelesaikan Top Up Saldo Deposit Fee sebesar Rp ' . number_format($totalAmount, 0, ',', '.') . '.');
+    }
 }

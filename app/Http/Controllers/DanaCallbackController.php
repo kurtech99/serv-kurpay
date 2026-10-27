@@ -76,12 +76,29 @@ class DanaCallbackController extends Controller
             'paid_at' => now(),
         ]);
 
-        // 5. Credit Merchant Balance (100% utuh tanpa potongan voucher)
         $merchant = $trx->merchant;
-        $merchant->addBalance($trx->amount);
 
-        // 6. Forward Webhook to Merchant's Mikhmon / Billing Callback URL
-        if (!empty($trx->callback_url)) {
+        // 5. Handling berdasarkan Jenis Transaksi & Gateway Mode
+        if ($trx->is_deposit_topup) {
+            // A. Top Up Saldo Kuota Deposit Fee Tenant
+            $merchant->addFeeDeposit($trx->amount);
+            Log::info("Kurtech Pay - Top Up Deposit Kuota Fee Berhasil: Merchant {$merchant->merchant_code} +Rp {$trx->amount}. Sisa Deposit: Rp {$merchant->fee_deposit_balance}");
+        } elseif ($trx->gateway_mode === 'custom') {
+            // B. Mode 2: Pakai QRIS Tenant Sendiri
+            // Uang 100% sudah masuk langsung ke DANA tenant. Kurtech potong fee 0.3% dari Saldo Deposit Kuota Fee tenant.
+            $feeToDeduct = (float) ($trx->customer_fee > 0 ? $trx->customer_fee : ceil($trx->amount * 0.003));
+            $merchant->deductFeeDeposit($feeToDeduct);
+            $trx->update(['deposit_fee_deducted' => $feeToDeduct]);
+            Log::info("Kurtech Pay - QRIS Tenant Sendiri: Potong fee 0.3% (Rp {$feeToDeduct}) dari Saldo Deposit Kuota Fee Merchant {$merchant->merchant_code}. Sisa Deposit: Rp {$merchant->fee_deposit_balance}");
+        } else {
+            // C. Mode 1: Sewa Gateway Kurtech (Default)
+            // Uang masuk ke DANA Kurtech, dicatat di dompet KurPay tenant 100% utuh tanpa potongan voucher.
+            $merchant->addBalance($trx->amount);
+            Log::info("Kurtech Pay - Gateway Kurtech: Trx {$trx->trx_id} Saldo Dompet Merchant +Rp {$trx->amount}");
+        }
+
+        // 6. Forward Webhook to Merchant's Mikhmon / Billing Callback URL (Hanya untuk transaksi voucher/billing, bukan deposit topup)
+        if (!$trx->is_deposit_topup && !empty($trx->callback_url)) {
             try {
                 $payload = [
                     'event' => 'payment.success',
@@ -107,8 +124,8 @@ class DanaCallbackController extends Controller
             }
         }
 
-        // 7. Auto-Withdrawal Check (Weekend / Ambang Batas)
-        if ($merchant->auto_withdraw_enabled && !empty($merchant->bank_account)) {
+        // 7. Auto-Withdrawal Check (Hanya untuk Mode Gateway Kurtech)
+        if (!$trx->is_deposit_topup && $trx->gateway_mode === 'kurtech' && $merchant->auto_withdraw_enabled && !empty($merchant->bank_account)) {
             $target = $merchant->auto_withdraw_target ?: 50000;
             $adminFee = (int) Setting::get('withdraw_fee', 10000);
             $isWeekend = in_array(date('N'), [6, 7]);

@@ -8,6 +8,7 @@ use App\Http\Controllers\DanaCallbackController;
 Route::prefix('v1')->group(function () {
     Route::post('/transaction/create', [ApiController::class, 'createTransaction']);
     Route::get('/transaction/detail', [ApiController::class, 'detailTransaction']);
+    Route::post('/internal/sync-user', [ApiController::class, 'syncUser']);
 });
 
 // Webhook Callback dari DANA Bisnis QRIS Kurtech
