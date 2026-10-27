@@ -13,7 +13,9 @@ class PaymentController extends Controller
         $trx = Transaction::with('merchant')->where('trx_id', $trxId)->firstOrFail();
 
         $merchant = $trx->merchant;
-        if ($merchant && $merchant->isCustomGateway() && !empty($merchant->custom_qris_image)) {
+        
+        // Top up deposit fee selalu wajib menggunakan QRIS resmi Kurtech
+        if (!$trx->is_deposit_topup && $trx->gateway_mode === 'custom' && $merchant && $merchant->isCustomGateway() && !empty($merchant->custom_qris_image)) {
             $qrisImage = asset('storage/' . $merchant->custom_qris_image);
             $merchantName = $merchant->custom_qris_name ?: $merchant->business_name;
             $nmid = $merchant->custom_nmid ?: '-';
