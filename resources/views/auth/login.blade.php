@@ -16,14 +16,14 @@
             
             <div style="margin-bottom: 16px;">
                 <label style="display: block; font-size: 12.5px; font-weight: 700; color: var(--kp-text-main); margin-bottom: 6px;">Username atau Email</label>
-                <input type="text" name="login" value="{{ old('login') }}" required placeholder="Contoh: admin atau admin@kurtech" 
+                <input type="text" name="login" value="{{ old('login') }}" required placeholder="Masukkan username atau email" 
                        style="width: 100%; padding: 11px 14px; border-radius: 12px; border: 1.5px solid var(--kp-border); font-size: 14px; font-family: var(--kp-font); outline: none; transition: border-color 0.2s;"
                        onfocus="this.style.borderColor='var(--kp-primary)'" onblur="this.style.borderColor='var(--kp-border)'">
             </div>
 
             <div style="margin-bottom: 20px;">
                 <label style="display: block; font-size: 12.5px; font-weight: 700; color: var(--kp-text-main); margin-bottom: 6px;">Kata Sandi</label>
-                <input type="password" name="password" required placeholder="••••••••" 
+                <input type="password" name="password" required placeholder="Masukkan kata sandi" 
                        style="width: 100%; padding: 11px 14px; border-radius: 12px; border: 1.5px solid var(--kp-border); font-size: 14px; font-family: var(--kp-font); outline: none; transition: border-color 0.2s;"
                        onfocus="this.style.borderColor='var(--kp-primary)'" onblur="this.style.borderColor='var(--kp-border)'">
             </div>
