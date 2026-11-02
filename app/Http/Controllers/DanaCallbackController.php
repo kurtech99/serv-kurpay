@@ -62,6 +62,44 @@ class DanaCallbackController extends Controller
         }
 
         if (!$trx) {
+            // Forward to VPN Remote Portal (remote.kurtech.my.id) if not found in Billing
+            try {
+                $vpnEndpoints = [
+                    'http://10.10.10.249/api/callback/dana-qris',
+                    'https://remote.kurtech.my.id/api/callback/dana-qris'
+                ];
+                
+                $vpnPayload = $request->all();
+                if (empty($vpnPayload['amount'])) {
+                    $vpnPayload['amount'] = $amount;
+                }
+                if (empty($vpnPayload['secret'])) {
+                    $vpnPayload['secret'] = 'kurtech_dana_2026';
+                }
+
+                foreach ($vpnEndpoints as $ep) {
+                    try {
+                        $resp = Http::timeout(4)->withoutVerifying()->post($ep, $vpnPayload);
+                        if ($resp->successful()) {
+                            $resJson = $resp->json();
+                            if (!empty($resJson['success'])) {
+                                Log::info("Kurtech Pay - Forwarded mutasi Rp {$amount} to VPN Remote Portal ({$ep}) successfully: " . $resp->body());
+                                return response()->json([
+                                    'success' => true,
+                                    'message' => 'Mutasi pembayaran diteruskan & sukses diproses di Server VPN Remote (' . ($resJson['trx_id'] ?? '') . ').',
+                                    'target' => 'remote.kurtech.my.id',
+                                    'vpn_response' => $resJson
+                                ]);
+                            }
+                        }
+                    } catch (\Throwable $te) {
+                        // try next endpoint
+                    }
+                }
+            } catch (\Throwable $e) {
+                Log::warning("Kurtech Pay - Forwarding to VPN Remote failed: " . $e->getMessage());
+            }
+
             Log::warning("Kurtech Pay - No pending transaction found for Rp {$amount}");
             return response()->json([
                 'success' => false,
